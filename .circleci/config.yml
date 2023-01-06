@@ -120,19 +120,16 @@ jobs:
           name: Build image
           command: |
             aws ecr get-login-password | docker login --username AWS --password-stdin ${ECR_DOMAIN}
-            docker build -f ./infra/docker/nginx/Dockerfile -t ${ECR_DOMAIN}/test-laravel-app/web:$CIRCLE_SHA1 -t ${ECR_DOMAIN}/test-laravel-apps/web:latest .
-            docker build -f ./infra/docker/php/Dockerfile -t ${ECR_DOMAIN}/test-laravel-app/app:$CIRCLE_SHA1 -t ${ECR_DOMAIN}/test-laravel-app/app:latest .
-            docker build -f ./infra/docker/mysql/Dockerfile -t ${ECR_DOMAIN}/test-laravel-app/db:$CIRCLE_SHA1 -t ${ECR_DOMAIN}/test-laravel-app/db:latest .
+            docker build -f ./infra/docker/nginx/Dockerfile -t ${ECR_DOMAIN}/test-laravel-app/web:$CIRCLE_SHA1 .
+            docker build -f ./infra/docker/php/Dockerfile -t ${ECR_DOMAIN}/test-laravel-app/app:$CIRCLE_SHA1 .
+            docker build -f ./infra/docker/mysql/Dockerfile -t ${ECR_DOMAIN}/test-laravel-app/db:$CIRCLE_SHA1 .
 
       - run:
           name: Push docker image
           command: |
             docker push ${ECR_DOMAIN}/test-laravel-app/web:$CIRCLE_SHA1
-            docker push ${ECR_DOMAIN}/test-laravel-app/web:latest
             docker push ${ECR_DOMAIN}/test-laravel-app/app:$CIRCLE_SHA1
-            docker push ${ECR_DOMAIN}/test-laravel-app/app:latest
             docker push ${ECR_DOMAIN}/test-laravel-app/db:$CIRCLE_SHA1
-            docker push ${ECR_DOMAIN}/test-laravel-app/db:latest
 
 workflows:
   version: 2
