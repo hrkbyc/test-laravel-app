@@ -131,6 +131,27 @@ jobs:
             docker push ${ECR_DOMAIN}/test-laravel-app/app:$CIRCLE_SHA1
             docker push ${ECR_DOMAIN}/test-laravel-app/db:$CIRCLE_SHA1
 
+  deploy:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - aws-cli/setup
+      - run:
+          name: download jq
+          command: |
+            wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+            mv jq-linux64 jq
+      - run:
+          name: login
+          command: |
+            aws ecs describe-task-definition --task-definition testTask | jq  '.taskDefinition | { containerDefinitions: .containerDefinitions }' > definition.json
+            aws ecs register-task-definition --execution-role-arn arn:aws:iam::054460265586:role/ecs-task-role --family testTask --cli-input-json file://definition.json
+            aws ecs update-service --cluster testCluster --service testService --task-definition testTask
+      - run:
+          name: migration
+          command: |
+            aws ecs run-task --cluster testCluster --task-definition testMigrationTask
+
 workflows:
   version: 2
   build_deploy:
@@ -139,6 +160,12 @@ workflows:
       - build:
           requires:
             - test
+          filters:
+            branches:
+              only: master
+      - deploy:
+          requires:
+            - build
           filters:
             branches:
               only: master
