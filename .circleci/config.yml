@@ -128,8 +128,11 @@ jobs:
           name: Push docker image
           command: |
             docker push ${ECR_DOMAIN}/test-laravel-app/web:$CIRCLE_SHA1
+            docker push ${ECR_DOMAIN}/test-laravel-app/web:latest
             docker push ${ECR_DOMAIN}/test-laravel-app/app:$CIRCLE_SHA1
+            docker push ${ECR_DOMAIN}/test-laravel-app/app:latest
             docker push ${ECR_DOMAIN}/test-laravel-app/db:$CIRCLE_SHA1
+            docker push ${ECR_DOMAIN}/test-laravel-app/db:latest
 
   deploy:
     docker:
