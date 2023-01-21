@@ -3,79 +3,79 @@ orbs:
   aws-cli: circleci/aws-cli@2.0
 
 jobs:
-  # test:
-  #   docker:
-  #     - image: circleci/php:8.0-fpm-buster-node
-  #       environment:
-  #         DB_HOST: 127.0.0.1
-  #         DB_PORT: 3306
-  #         DB_DATABASE: laravel_local
-  #         DB_USERNAME: phper
-  #         DB_PASSWORD: secret
-  #     - image: circleci/mysql:8.0-ram
-  #       command: [--max_allowed_packet=32M]
-  #       environment:
-  #         MYSQL_ROOT_PASSWORD: secret
-  #         MYSQL_DATABASE: laravel_local
-  #         MYSQL_USER: phper
-  #         MYSQL_PASSWORD: secret
+  test:
+    docker:
+      - image: circleci/php:8.0-fpm-buster-node
+        environment:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: laravel_local
+          DB_USERNAME: phper
+          DB_PASSWORD: secret
+      - image: circleci/mysql:8.0-ram
+        command: [--max_allowed_packet=32M]
+        environment:
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_DATABASE: laravel_local
+          MYSQL_USER: phper
+          MYSQL_PASSWORD: secret
 
-  #   steps:
-  #     - checkout
+    steps:
+      - checkout
 
-  #     - run:
-  #         name: Setting Access Permissions
-  #         command: |
-  #           chmod -R 777 ./backend/storage
-  #           chmod -R 777 ./backend/bootstrap/cache
+      - run:
+          name: Setting Access Permissions
+          command: |
+            chmod -R 777 ./backend/storage
+            chmod -R 777 ./backend/bootstrap/cache
 
-  #     - run:
-  #         name: Install and configure the required packages
-  #         command: |
-  #           sudo apt-get -y update && \
-  #           sudo apt-get -y install git libicu-dev libonig-dev libzip-dev unzip locales libfreetype6-dev libjpeg62-turbo-dev libpng-dev supervisor && \
-  #           sudo apt-get clean && \
-  #           sudo rm -rf /var/lib/apt/lists/* && \
-  #           sudo docker-php-ext-install intl pdo_mysql zip bcmath pcntl && \
-  #           sudo docker-php-ext-configure gd --with-freetype --with-jpeg && \
-  #           sudo docker-php-ext-install -j$(nproc) gd exif
+      - run:
+          name: Install and configure the required packages
+          command: |
+            sudo apt-get -y update && \
+            sudo apt-get -y install git libicu-dev libonig-dev libzip-dev unzip locales libfreetype6-dev libjpeg62-turbo-dev libpng-dev supervisor && \
+            sudo apt-get clean && \
+            sudo rm -rf /var/lib/apt/lists/* && \
+            sudo docker-php-ext-install intl pdo_mysql zip bcmath pcntl && \
+            sudo docker-php-ext-configure gd --with-freetype --with-jpeg && \
+            sudo docker-php-ext-install -j$(nproc) gd exif
 
-  #     - run: sudo sh -c "echo \"memory_limit = 2048M\" > /usr/local/etc/php/conf.d/memory.ini"
-  #     - run: php -i | grep memory_limit
+      - run: sudo sh -c "echo \"memory_limit = 2048M\" > /usr/local/etc/php/conf.d/memory.ini"
+      - run: php -i | grep memory_limit
 
-  #     # mysql
-  #     - run:
-  #         name: Get ready for mysql
-  #         command: |
-  #           dockerize -wait tcp://localhost:3306 -timeout 1m
+      # mysql
+      - run:
+          name: Get ready for mysql
+          command: |
+            dockerize -wait tcp://localhost:3306 -timeout 1m
 
-  #     # composer
-  #     - restore_cache:
-  #         key: composer-v1-{{ checksum "./backend/composer.lock" }}
-  #     - run: composer install -n --prefer-dist --working-dir=./backend
-  #     - save_cache:
-  #         key: composer-v1-{{ checksum "./backend/composer.lock" }}
-  #         paths:
-  #           - ./backend/vendor
+      # composer
+      - restore_cache:
+          key: composer-v1-{{ checksum "./backend/composer.lock" }}
+      - run: composer install -n --prefer-dist --working-dir=./backend
+      - save_cache:
+          key: composer-v1-{{ checksum "./backend/composer.lock" }}
+          paths:
+            - ./backend/vendor
 
-  #     # node
-  #     - restore_cache:
-  #         keys:
-  #           - npm-v3-{{ checksum "./backend/yarn.lock" }}
-  #           - npm-v3-
-  #     - run: yarn install --cwd ./backend
-  #     - save_cache:
-  #         key: npm-v3-{{ checksum "./backend/yarn.lock" }}
-  #         paths:
-  #           - ./backend/node_modules
+      # node
+      - restore_cache:
+          keys:
+            - npm-v3-{{ checksum "./backend/yarn.lock" }}
+            - npm-v3-
+      - run: yarn install --cwd ./backend
+      - save_cache:
+          key: npm-v3-{{ checksum "./backend/yarn.lock" }}
+          paths:
+            - ./backend/node_modules
 
-  #     # .envファイルをcircleci経由で渡す
-  #     - run:
-  #         name: Base64 decode env file
-  #         command: echo $ENV | base64 -di > ./backend/.env
+      # .envファイルをcircleci経由で渡す
+      - run:
+          name: Base64 decode env file
+          command: echo $ENV | base64 -di > ./backend/.env
 
-  #     - run: php ./backend/artisan migrate
-  #     - run: php ./backend/vendor/bin/phpunit --configuration=./backend/phpunit.xml --testdox
+      - run: php ./backend/artisan migrate
+      - run: php ./backend/vendor/bin/phpunit --configuration=./backend/phpunit.xml --testdox
 
   build:
     docker:
@@ -131,41 +131,41 @@ jobs:
             docker push ${ECR_DOMAIN}/test-laravel-app/app:$CIRCLE_SHA1
             docker push ${ECR_DOMAIN}/test-laravel-app/db:$CIRCLE_SHA1
 
-  # deploy:
-  #   docker:
-  #     - image: circleci/python:3.7
-  #   steps:
-  #     - aws-cli/setup
-  #     - run:
-  #         name: download jq
-  #         command: |
-  #           wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
-  #           mv jq-linux64 jq
-  #     - run:
-  #         name: login
-  #         command: |
-  #           aws ecs describe-task-definition --task-definition testTask | jq  '.taskDefinition | { containerDefinitions: .containerDefinitions }' > definition.json
-  #           aws ecs register-task-definition --execution-role-arn arn:aws:iam::054460265586:role/ecs-task-role --family testTask --cli-input-json file://definition.json
-  #           aws ecs update-service --cluster testCluster --service testService --task-definition testTask
-  #     - run:
-  #         name: migration
-  #         command: |
-  #           aws ecs run-task --cluster testCluster --task-definition testMigrationTask
+  deploy:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - aws-cli/setup
+      - run:
+          name: download jq
+          command: |
+            wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+            mv jq-linux64 jq
+      - run:
+          name: login
+          command: |
+            aws ecs describe-task-definition --task-definition testTask | jq  '.taskDefinition | { containerDefinitions: .containerDefinitions }' > definition.json
+            aws ecs register-task-definition --execution-role-arn arn:aws:iam::054460265586:role/testEcsTaskRole --family testTask --cli-input-json file://definition.json
+            aws ecs update-service --cluster testCluster --service testService --task-definition testTask
+      - run:
+          name: migration
+          command: |
+            aws ecs run-task --cluster testCluster --task-definition testMigrationTask
 
 workflows:
   version: 2
   build_deploy:
     jobs:
-      # - test
+      - test
       - build:
-          # requires:
-          #   - test
+          requires:
+            - test
           filters:
             branches:
               only: master
-      # - deploy:
-      #     requires:
-      #       - build
-      #     filters:
-      #       branches:
-      #         only: master
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
