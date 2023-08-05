@@ -154,6 +154,10 @@ jobs:
           name: migration
           command: |
             aws ecs run-task --cluster testCluster --task-definition testMigrationTask
+      - run:
+          name: Deploy with CodeDeploy
+          command: |
+            aws deploy create-deployment --application-name test_app --deployment-group-name test_deployment_group
 
 workflows:
   version: 2
