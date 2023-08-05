@@ -149,7 +149,6 @@ jobs:
           command: |
             aws ecs describe-task-definition --task-definition testTask | jq  '.taskDefinition | { containerDefinitions: .containerDefinitions }' > definition.json
             aws ecs register-task-definition --execution-role-arn arn:aws:iam::054460265586:role/testEcsTaskRole --family testTask --cli-input-json file://definition.json
-            aws ecs update-service --cluster testCluster --service testService --task-definition testTask
       - run:
           name: migration
           command: |
@@ -157,7 +156,7 @@ jobs:
       - run:
           name: Deploy with CodeDeploy
           command: |
-            aws deploy create-deployment --application-name test_app --deployment-group-name test_deployment_group
+            aws deploy create-deployment --application-name test_app --deployment-group-nametest_deployment_group
 
 workflows:
   version: 2
