@@ -1,81 +1,95 @@
 version: 2.1
 orbs:
   aws-cli: circleci/aws-cli@2.0
+  aws-ecr: circleci/aws-ecr@8.2.1
+  aws-ecs: circleci/aws-ecs@3.2.0
 
 jobs:
-  test:
-    docker:
-      - image: circleci/php:8.0-fpm-buster-node
-        environment:
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: laravel_local
-          DB_USERNAME: phper
-          DB_PASSWORD: secret
-      - image: circleci/mysql:8.0-ram
-        command: [--max_allowed_packet=32M]
-        environment:
-          MYSQL_ROOT_PASSWORD: secret
-          MYSQL_DATABASE: laravel_local
-          MYSQL_USER: phper
-          MYSQL_PASSWORD: secret
+  # test:
+  #   docker:
+  #     - image: circleci/php:8.0-fpm-buster-node
+  #       environment:
+  #         DB_HOST: 127.0.0.1
+  #         DB_PORT: 3306
+  #         DB_DATABASE: laravel_local_test_1
+  #         DB_USERNAME: phper
+  #         DB_PASSWORD: secret
+  #     - image: circleci/mysql:8.0-ram
+  #       command: [--max_allowed_packet=32M]
+  #       environment:
+  #         MYSQL_ROOT_PASSWORD: secret
+  #         MYSQL_DATABASE: laravel_local_test_1
+  #         MYSQL_USER: phper
+  #         MYSQL_PASSWORD: secret
 
-    steps:
-      - checkout
+  #   steps:
+  #     - checkout
 
-      - run:
-          name: Setting Access Permissions
-          command: |
-            chmod -R 777 ./backend/storage
-            chmod -R 777 ./backend/bootstrap/cache
+  #     - run:
+  #         name: Setting Access Permissions
+  #         command: |
+  #           chmod -R 777 ./backend/storage
+  #           chmod -R 777 ./backend/bootstrap/cache
 
-      - run:
-          name: Install and configure the required packages
-          command: |
-            sudo apt-get -y update && \
-            sudo apt-get -y install git libicu-dev libonig-dev libzip-dev unzip locales libfreetype6-dev libjpeg62-turbo-dev libpng-dev supervisor && \
-            sudo apt-get clean && \
-            sudo rm -rf /var/lib/apt/lists/* && \
-            sudo docker-php-ext-install intl pdo_mysql zip bcmath pcntl && \
-            sudo docker-php-ext-configure gd --with-freetype --with-jpeg && \
-            sudo docker-php-ext-install -j$(nproc) gd exif
+  #     - run:
+  #         name: Install and configure the required packages
+  #         command: |
+  #           sudo apt-get -y update && \
+  #           sudo apt-get -y install git libicu-dev libonig-dev libzip-dev unzip locales libfreetype6-dev libjpeg62-turbo-dev libpng-dev supervisor && \
+  #           sudo apt-get clean && \
+  #           sudo rm -rf /var/lib/apt/lists/* && \
+  #           sudo docker-php-ext-install intl pdo_mysql zip bcmath pcntl && \
+  #           sudo docker-php-ext-configure gd --with-freetype --with-jpeg && \
+  #           sudo docker-php-ext-install -j$(nproc) gd exif
 
-      - run: sudo sh -c "echo \"memory_limit = 2048M\" > /usr/local/etc/php/conf.d/memory.ini"
-      - run: php -i | grep memory_limit
+  #     #  PHPのメモリーリミットを変更
+  #     - run: sudo sh -c "echo \"memory_limit = 2048M\" > /usr/local/etc/php/conf.d/memory.ini"
+  #     - run: php -i | grep memory_limit
 
-      # mysql
-      - run:
-          name: Get ready for mysql
-          command: |
-            dockerize -wait tcp://localhost:3306 -timeout 1m
+  #     # mysql
+  #     - run:
+  #         name: Get ready for mysql
+  #         command: |
+  #           dockerize -wait tcp://localhost:3306 -timeout 1m
 
-      # composer
-      - restore_cache:
-          key: composer-v1-{{ checksum "./backend/composer.lock" }}
-      - run: composer install -n --prefer-dist --working-dir=./backend
-      - save_cache:
-          key: composer-v1-{{ checksum "./backend/composer.lock" }}
-          paths:
-            - ./backend/vendor
+  #     # composer
+  #     - restore_cache:
+  #         key: composer-v1-{{ checksum "./backend/composer.lock" }}
+  #     - run: composer install -n --prefer-dist --working-dir=./backend
+  #     - save_cache:
+  #         key: composer-v1-{{ checksum "./backend/composer.lock" }}
+  #         paths:
+  #           - ./backend/vendor
 
-      # node
-      - restore_cache:
-          keys:
-            - npm-v3-{{ checksum "./backend/yarn.lock" }}
-            - npm-v3-
-      - run: yarn install --cwd ./backend
-      - save_cache:
-          key: npm-v3-{{ checksum "./backend/yarn.lock" }}
-          paths:
-            - ./backend/node_modules
+  #     # node
+  #     - restore_cache:
+  #         keys:
+  #           - npm-v3-{{ checksum "./backend/yarn.lock" }}
+  #           - npm-v3-
+  #     - run: yarn install --cwd ./backend
+  #     - save_cache:
+  #         key: npm-v3-{{ checksum "./backend/yarn.lock" }}
+  #         paths:
+  #           - ./backend/node_modules
 
-      # .envファイルをcircleci経由で渡す
-      - run:
-          name: Base64 decode env file
-          command: echo $ENV | base64 -di > ./backend/.env
+  #     # .envファイルをcircleci経由で渡す
+  #     - run:
+  #         name: Setting .env.testing file
+  #         command: echo $ENV_TEST | base64 -di > ./backend/.env.testing
+  #     # .circleciでAPP_OLD_DIRの場所が変わるので置き換える
+  #     - run: sed -e "s%APP_OLD_DIR=/work/backend/app_old/%APP_OLD_DIR=/home/circleci/project/backend/app_old/%" ./backend/.env.testing > tmp
+  #     - run: mv tmp ./backend/.env.testing
 
-      - run: php ./backend/artisan migrate
-      - run: php ./backend/vendor/bin/phpunit --configuration=./backend/phpunit.xml --testdox
+  #     - run:
+  #         name: Base64 decode env file
+  #         command: echo $ENV_TEST | base64 -di > ./backend/.env
+
+  #     - run: php ./backend/artisan migrate
+  #     - run: php ./backend/vendor/bin/phpunit --configuration=./backend/phpunit.xml --testdox
+  #     - slack/status:
+  #         success_message: ':circleci-pass: $CIRCLE_BRANCH のテストが完了しました\n:github_octocat: User：$CIRCLE_USERNAME'
+  #         failure_message: ':circleci-fail: $CIRCLE_BRANCH のテストが失敗しました\n:github_octocat: User：$CIRCLE_USERNAME'
+  #         webhook: '${SLACK_WEBHOOK}'
 
   build:
     docker:
@@ -134,44 +148,94 @@ jobs:
             docker push ${ECR_DOMAIN}/test-laravel-app/db:$CIRCLE_SHA1
             docker push ${ECR_DOMAIN}/test-laravel-app/db:latest
 
+      # - slack/status:
+      #     success_message: ':circleci-pass: $CIRCLE_BRANCH のビルドが完了しました\n:github_octocat: User：$CIRCLE_USERNAME'
+      #     failure_message: ':circleci-fail: $CIRCLE_BRANCH のビルドが失敗しました\n:github_octocat: User：$CIRCLE_USERNAME'
+      #     webhook: '${SLACK_WEBHOOK}'
+
   deploy:
     docker:
       - image: circleci/python:3.7
     steps:
+      - checkout # プロジェクトのファイルにアクセス出来るようになる
       - aws-cli/setup
       - run:
           name: download jq
           command: |
             wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
             mv jq-linux64 jq
+            
       - run:
           name: login
           command: |
             aws ecs describe-task-definition --task-definition testTask | jq  '.taskDefinition | { containerDefinitions: .containerDefinitions }' > definition.json
             aws ecs register-task-definition --execution-role-arn arn:aws:iam::054460265586:role/testEcsTaskRole --family testTask --cli-input-json file://definition.json
-      - run:
-          name: Deploy with CodeDeploy
-          command: |
-            aws deploy create-deployment --application-name test_app --deployment-group-name test_deployment_group
-      - run:
-          name: migration
-          command: |
-            aws ecs run-task --cluster testCluster --task-definition testMigrationTask
+
+            CONTENT="version: 0.0
+            Resources:
+            - TargetService:
+                Type: AWS::ECS::Service
+                Properties:
+                  TaskDefinition: \"<TASK_DEFINITION>\"
+                  LoadBalancerInfo:
+                    ContainerName: \"web\"
+                    ContainerPort: 80"
+
+            SHA256=$(echo -n "$CONTENT" | sha256sum | awk '{print $1}')
+            
+            aws deploy create-deployment \
+                --application-name test_app \
+                --deployment-group-name test_deployment_group \
+                --description "Deploying revision $CIRCLE_SHA1" \
+                --revision "{
+                  "revisionType": "AppSpecContent",
+                  "appSpecContent": {
+                    "content": "version: 0.0\nResources:\n- TargetService:\n    Type: AWS::ECS::Service\n    Properties:\n      TaskDefinition: \"<TASK_DEFINITION>\"\n      LoadBalancerInfo:\n        ContainerName: \"web\"\n        ContainerPort: 80",
+                    "sha256": "80343a9f6e7dedb1c0f51c26cd6ad638511902d9f4203aa3dea8a6ea19f7d68c"
+                  }
+                }"
+
+  # aws ecs update-service --cluster testCluster --service testService --task-definition testTask
+  
+  # migration:
+  #   docker:
+  #     - image: circleci/python:3.7
+  #   steps:
+  #     - aws-cli/setup
+  #     - run:
+  #         name: migration
+  #         command: |
+  #           aws ecs run-task --cluster testCluster --task-definition testMigrationTask
+
 
 workflows:
-  version: 2
-  build_deploy:
+  build_and_deploy:
     jobs:
-      - test
-      - build:
-          requires:
-            - test
-          filters:
-            branches:
-              only: master
+      # - build:
+      #     # requires:
+      #     #   - test
+      #     filters:
+      #       branches:
+      #         only: master
       - deploy:
-          requires:
-            - build
+          # requires:
+          #   - build
           filters:
             branches:
               only: master
+      # - aws-ecs/deploy-service-update:
+      #     requires:
+      #       - deploy
+      #     family: "testTask"
+      #     cluster: "testCluster"
+      #     container-image-name-updates: "container=app,tag=${CIRCLE_SHA1};container=web,tag=${CIRCLE_SHA1};container=db,tag=${CIRCLE_SHA1};"
+      #     deployment-controller: "CODE_DEPLOY"
+      #     codedeploy-application-name: 'test_app'
+      #     codedeploy-deployment-group-name: 'test_deployment_group'
+      #     codedeploy-load-balanced-container-name: 'web'
+      # - migration:
+      #     requires:
+      #       - aws-ecs/deploy-service-update
+      #     filters:
+      #       branches:
+      #         only: master
