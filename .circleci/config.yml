@@ -152,7 +152,7 @@ jobs:
       - run:
           name: Deploy with CodeDeploy
           command: |
-            aws deploy create-deployment --application-name test_app --deployment-group-nametest_deployment_group
+            aws deploy create-deployment --application-name test_app --deployment-group-name test_deployment_group
       - run:
           name: migration
           command: |
